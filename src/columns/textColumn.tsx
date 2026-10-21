@@ -100,6 +100,7 @@ const TextComponent = React.memo<
         asyncRef.current.escPressed = false
         // Save current timestamp
         asyncRef.current.focusedAt = Date.now()
+        asyncRef.current.changedAt = 0
       }
       // When the cell looses focus (by pressing Esc, Enter, clicking away...) we make sure to blur the input
       // Otherwise the user would still see the cursor blinking
@@ -110,7 +111,9 @@ const TextComponent = React.memo<
             !asyncRef.current.escPressed &&
             !asyncRef.current.continuousUpdates &&
             !asyncRef.current.firstRender &&
-            // Make sure that focus was gained more than 10 ms ago, used to prevent flickering
+            // StrictMode replays mount effects with focus=false. Never commit
+            // display-formatted text unless this cell actually gained focus.
+            asyncRef.current.focusedAt > 0 &&
             asyncRef.current.changedAt >= asyncRef.current.focusedAt
           ) {
             asyncRef.current.setRowData(
