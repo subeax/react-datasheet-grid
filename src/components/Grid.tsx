@@ -67,7 +67,7 @@ export const Grid = <T extends any>({
     getScrollElement: () => outerRef.current,
     paddingStart: headerRowHeight,
     estimateSize: (index) => rowHeight(index).height,
-    getItemKey: (index: number): React.Key => {
+    getItemKey: (index: number): string | number => {
       if (rowKey && index > 0) {
         const row = data[index - 1]
         if (typeof rowKey === 'function') {
@@ -93,7 +93,7 @@ export const Grid = <T extends any>({
     getScrollElement: () => outerRef.current,
     estimateSize: (index) => columnWidths?.[index] ?? 100,
     horizontal: true,
-    getItemKey: (index: number): React.Key => columns[index].id ?? index,
+    getItemKey: (index: number): string | number => columns[index].id ?? index,
     overscan: 1,
     rangeExtractor: (range) => {
       const result = defaultRangeExtractor(range)
