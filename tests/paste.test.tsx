@@ -107,7 +107,7 @@ test('Single value text plain', async () => {
   )
 })
 
-test('HTML over text', async () => {
+test('Plain text over HTML', async () => {
   const ref = { current: null as unknown as DataSheetGridRef }
   const onChange = jest.fn()
 
@@ -132,7 +132,7 @@ test('HTML over text', async () => {
 
   expect(onChange).toHaveBeenCalledWith(
     [
-      { firstName: null, lastName: 'Musk' },
+      { firstName: null, lastName: 'foo' },
       { firstName: null, lastName: null },
     ],
     [{ type: 'UPDATE', fromRowIndex: 0, toRowIndex: 1 }]
