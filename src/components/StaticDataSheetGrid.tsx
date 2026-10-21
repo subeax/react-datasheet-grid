@@ -57,4 +57,4 @@ export const StaticDataSheetGrid = React.forwardRef<
   }
 ) as <T extends any>(
   props: DataSheetGridProps<T> & { ref?: React.ForwardedRef<DataSheetGridRef> }
-) => JSX.Element
+) => React.JSX.Element

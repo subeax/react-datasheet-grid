@@ -49,7 +49,7 @@ export const defaultRenderItem = (item: ContextMenuItem) => {
 
 export const createContextMenuComponent =
   (
-    renderItem: (item: ContextMenuItem) => JSX.Element = defaultRenderItem
+    renderItem: (item: ContextMenuItem) => React.JSX.Element = defaultRenderItem
   ): FC<ContextMenuComponentProps> =>
   // eslint-disable-next-line react/display-name
   ({ clientX, clientY, items, close }) => {

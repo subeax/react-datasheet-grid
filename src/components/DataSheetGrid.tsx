@@ -90,7 +90,7 @@ export const DataSheetGrid = React.memo(
         onScroll,
       }: DataSheetGridProps<T>,
       ref: React.ForwardedRef<DataSheetGridRef>
-    ): JSX.Element => {
+    ): React.JSX.Element => {
       const lastEditingCellRef = useRef<Cell | null>(null)
       const disableContextMenu = disableContextMenuRaw || lockRows
       const columns = useColumns(rawColumns, gutterColumn, stickyRightColumn)
@@ -1851,7 +1851,7 @@ export const DataSheetGrid = React.memo(
   )
 ) as <T extends any>(
   props: DataSheetGridProps<T> & { ref?: React.ForwardedRef<DataSheetGridRef> }
-) => JSX.Element
+) => React.JSX.Element
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

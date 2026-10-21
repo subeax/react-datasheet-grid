@@ -23,7 +23,7 @@ export type CellProps<T, C> = {
   getContextMenuItems: () => ContextMenuItem[]
 }
 
-export type CellComponent<T, C> = (props: CellProps<T, C>) => JSX.Element
+export type CellComponent<T, C> = (props: CellProps<T, C>) => React.JSX.Element
 
 export type Column<T, C, PasteValue> = {
   id?: string
