@@ -37,7 +37,8 @@ Therefore, `columns`, `createRow`, `duplicateRow` and other non primitive typed 
 after first render.
 
 :::info
-The only exception to this rule is the `onChange` prop that is always dynamic.
+The `onChange`, `onColumnsResize` and `onColumnsResizing` callbacks are always dynamic.
+`initialColumnWidths` is read only on mount by both grid variants; it is not a controlled prop.
 :::
 
 All other primitive props (number, string, or boolean) are dynamic. Therefore, `data`, `height`, `lockRows` and other

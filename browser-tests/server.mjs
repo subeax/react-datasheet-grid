@@ -10,10 +10,13 @@ const alternateReact = process.env.REACT_TEST_ROOT
 const alternateRequire =
   alternateReact && createRequire(resolve(alternateReact, 'package.json'))
 const { outputFiles } = await build({
-  entryPoints: [resolve(root, 'browser-tests/fixture.tsx')],
+  entryPoints: {
+    bundle: resolve(root, 'browser-tests/fixture.tsx'),
+    resize: resolve(root, 'browser-tests/resizeFixture.tsx'),
+  },
   bundle: true,
   write: false,
-  outfile: 'bundle.js',
+  outdir: 'browser-bundles',
   define: {
     'process.env.NODE_ENV': JSON.stringify(
       process.env.BROWSER_TEST_MODE ?? 'development'
@@ -47,8 +50,9 @@ const server = createServer((request, response) => {
     response.end(asset)
   } else {
     response.setHeader('Content-Type', 'text/html')
+    const entry = path === '/resize' ? 'resize' : 'bundle'
     response.end(
-      '<!doctype html><html><head><link rel="stylesheet" href="/bundle.css"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>'
+      `<!doctype html><html><head><link rel="stylesheet" href="/${entry}.css"></head><body><div id="root"></div><script src="/${entry}.js"></script></body></html>`
     )
   }
 })

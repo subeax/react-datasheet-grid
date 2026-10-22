@@ -31,9 +31,19 @@ built release tarball, not the repository source archive.
   both grid variants, matching the existing primitive-prop contract. No default
   behavior changes: zero columns are frozen unless the consumer opts in.
 
+- [PR #350](https://github.com/nick-keller/react-datasheet-grid/pull/350)
+  (`ede1a0517f405910c706e0977221ec0b8f6fd77e`, adapted): opt-in resizing of
+  named data columns via `onColumnsResize`, with `initialColumnWidths` by ID.
+  The port keeps the existing flex-width calculation for untouched columns,
+  clamps overrides to column limits, and adds `onColumnsResizing` previews.
+  Pointer capture and scoped listeners replace global document handlers; Escape,
+  pointer cancellation, window blur and unmount roll back the active gesture.
+  Keyboard resizing and sticky-left/right combinations are covered as well.
+  The draft's unrelated website/dependency changes were not adopted.
+
 Not adopted: #349 adds a null fallback after `String.replace`, which cannot
 fix undefined input and has no effect on strings. #327's single-column variant
-is superseded by #386's N-column API. #350 (resizing) remains a separate feature.
+is superseded by #386's N-column API.
 The existing frozen gutter and optional sticky-right column are retained.
 
 ## Build and publish
@@ -54,7 +64,9 @@ need build scripts, private registries or GitHub credentials.
 The upstream Jest suite and regression tests run with React 18. Browser tests
 in `browser-tests/` exercise real horizontal/vertical layout, gutter selection,
 editing/Escape, cross-pane clipboard and deletion, fill, keyboard scrolling,
-and hidden-gutter/sticky-right combinations. Run them with:
+and hidden-gutter/sticky-right combinations. Resizing tests cover min/max bounds,
+live geometry, persistence by ID, cancellation/cleanup, keyboard interaction,
+lazy text commits, and independent grids. Run them with:
 
 ```sh
 npm exec playwright install chromium

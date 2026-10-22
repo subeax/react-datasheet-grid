@@ -10,6 +10,8 @@ import {
 import cx from 'classnames'
 import { Cell as CellComponent } from './Cell'
 import { useMemoizedIndexCallback } from '../hooks/useMemoizedIndexCallback'
+import { ColumnResizeControls } from '../hooks/useColumnResizing'
+import { ColumnResizeHandle } from './ColumnResizeHandle'
 
 export const Grid = <T extends any>({
   data,
@@ -37,6 +39,7 @@ export const Grid = <T extends any>({
   insertRowAfter,
   stopEditing,
   onScroll,
+  columnResize,
 }: {
   data: T[]
   columns: Column<T, any, any>[]
@@ -63,6 +66,7 @@ export const Grid = <T extends any>({
   insertRowAfter: (row: number, count?: number) => void
   stopEditing: (opts?: { nextRow?: boolean }) => void
   onScroll?: React.UIEventHandler<HTMLDivElement>
+  columnResize?: ColumnResizeControls
 }) => {
   const rowVirtualizer = useVirtualizer({
     count: data.length,
@@ -174,6 +178,18 @@ export const Grid = <T extends any>({
                 <div className="dsg-cell-header-container">
                   {columns[col.index].title}
                 </div>
+                {columnResize &&
+                  col.index > 0 &&
+                  (!hasStickyRightColumn || col.index < columns.length - 1) &&
+                  columns[col.index].id && (
+                    <ColumnResizeHandle
+                      columnId={columns[col.index].id ?? ''}
+                      width={col.size}
+                      minWidth={columns[col.index].minWidth}
+                      maxWidth={columns[col.index].maxWidth}
+                      controls={columnResize}
+                    />
+                  )}
               </CellComponent>
             ))}
           </div>

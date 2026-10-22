@@ -1,22 +1,28 @@
 import { Column } from '../types'
 import { useMemo } from 'react'
+import { resizedColumnWidth } from '../utils/columnResizing'
 
 export const getColumnWidths = (
   containerWidth: number,
   columns: Pick<
     Column<any, any, any>,
-    'basis' | 'grow' | 'shrink' | 'minWidth' | 'maxWidth'
-  >[]
+    'id' | 'basis' | 'grow' | 'shrink' | 'minWidth' | 'maxWidth'
+  >[],
+  fixedWidths: Record<string, number> = {}
 ) => {
-  const items = columns.map(({ basis, minWidth, maxWidth }) => ({
-    basis,
-    minWidth,
-    maxWidth,
-    size: basis,
-    violation: 0,
-    frozen: false,
-    factor: 0,
-  }))
+  const items = columns.map((column) => {
+    const { basis, minWidth, maxWidth } = column
+    const fixed = resizedColumnWidth(column, fixedWidths)
+    return {
+      basis,
+      minWidth,
+      maxWidth,
+      size: fixed ?? basis,
+      violation: 0,
+      frozen: fixed !== undefined,
+      factor: 0,
+    }
+  })
 
   let availableWidth = items.reduce(
     (acc, cur) => acc - cur.size,
@@ -88,12 +94,22 @@ export const getColumnWidths = (
 
 export const useColumnWidths = (
   columns: Column<any, any, any>[],
-  width?: number
+  width?: number,
+  fixedWidths: Record<string, number> = {}
 ) => {
   const columnsHash = columns
-    .map(({ basis, minWidth, maxWidth, grow, shrink }) =>
-      [basis, minWidth, maxWidth, grow, shrink].join(',')
-    )
+    .map((column) => {
+      const { id, basis, minWidth, maxWidth, grow, shrink } = column
+      return [
+        id,
+        basis,
+        minWidth,
+        maxWidth,
+        grow,
+        shrink,
+        resizedColumnWidth(column, fixedWidths),
+      ].join(',')
+    })
     .join('|')
 
   return useMemo(() => {
@@ -106,7 +122,7 @@ export const useColumnWidths = (
       }
     }
 
-    const columnWidths = getColumnWidths(width, columns)
+    const columnWidths = getColumnWidths(width, columns, fixedWidths)
 
     let totalWidth = 0
 

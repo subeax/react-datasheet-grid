@@ -144,6 +144,48 @@ cannot be selected, it is only used to show options to the user: delete row, ins
 />
 ```
 
+### onColumnsResize / initialColumnWidths / onColumnsResizing
+
+> `onColumnsResize?: (widths: Record<string, number>) => void`<br />
+> `initialColumnWidths?: Record<string, number>`<br />
+> `onColumnsResizing?: (widths: Record<string, number>) => void`
+
+Providing `onColumnsResize` enables resize handles on data columns with a non-empty,
+unique `id`. Gutter and sticky-right action columns are not resizable. Resizing is
+otherwise disabled by default and does not change row values or selection.
+
+```tsx
+<DataSheetGrid
+  columns={columns} // Give each data column a stable, unique id.
+  value={data}
+  onChange={setData}
+  initialColumnWidths={{ firstName: 180 }}
+  onColumnsResize={(widths) => saveWidths(widths)}
+/>
+```
+
+`initialColumnWidths` is copied **once on mount**, including when resizing is
+not enabled. It is not a controlled value prop; to apply a different initial set,
+remount the grid. Unknown IDs and non-finite values are ignored. Widths are clamped
+to each column's `minWidth` / `maxWidth`, with a minimum of one pixel. Named,
+resized columns use fixed widths; untouched columns still use their flex settings
+to share remaining space. If every column is fixed, unused space is not filled
+by changing the chosen widths.
+
+`onColumnsResize` is called once at the end of a changed drag or keyboard resize,
+not on mount or cancellation. Its argument is a copy of the fixed-width overrides
+by ID, not an array indexed by position. You can persist it outside the grid and
+pass it back on the next mount. Existing overrides survive later resizes.
+
+Optional `onColumnsResizing` reports override previews during drag and reports
+the restored overrides on cancellation. It does not enable handles by itself.
+Both callbacks use their latest prop values in both static and dynamic grids.
+
+Escape, pointer cancellation, window blur or removing the handle cancels the drag.
+The separator handles also support Left/Right (10 pixels, or 50 with Shift),
+Home (minimum) and End (maximum, when specified). Changing column widths works
+with `stickyLeftColumnNumber` and `stickyRightColumn`.
+
 ## Size
 ```tsx
 <DataSheetGrid

@@ -99,6 +99,23 @@
   transform: none;
 }
 
+.dsg-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+
+.dsg-resize-handle:hover,
+.dsg-resize-handle:focus-visible {
+  border-right: 2px solid var(--dsg-selection-border-color);
+  outline: none;
+}
+
 .dsg-cell-disabled {
   background: var(--dsg-cell-disabled-background-color);
 }

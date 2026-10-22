@@ -167,6 +167,12 @@ export type DataSheetGridProps<T> = {
   onActiveCellChange?: (opts: { cell: CellWithId | null }) => void
   onSelectionChange?: (opts: { selection: SelectionWithId | null }) => void
   onScroll?: React.UIEventHandler<HTMLDivElement> | undefined
+  /** Enables resizing of named data columns; called once when a width edit is committed. */
+  onColumnsResize?: (widths: Record<string, number>) => void
+  /** Optional live preview, also notified when a drag is cancelled. */
+  onColumnsResizing?: (widths: Record<string, number>) => void
+  /** Initial fixed-width overrides by column ID. Read once on mount. */
+  initialColumnWidths?: Record<string, number>
 }
 
 type CellWithIdInput = {

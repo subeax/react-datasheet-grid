@@ -16,6 +16,7 @@ import {
   Selection,
 } from '../types'
 import { useColumnWidths } from '../hooks/useColumnWidths'
+import { useColumnResizing } from '../hooks/useColumnResizing'
 import { useResizeDetector } from 'react-resize-detector'
 import { useColumns } from '../hooks/useColumns'
 import { useEdges } from '../hooks/useEdges'
@@ -93,6 +94,9 @@ export const DataSheetGrid = React.memo(
         rowClassName,
         cellClassName,
         onScroll,
+        onColumnsResize,
+        onColumnsResizing,
+        initialColumnWidths,
       }: DataSheetGridProps<T>,
       ref: React.ForwardedRef<DataSheetGridRef>
     ): React.JSX.Element => {
@@ -100,6 +104,17 @@ export const DataSheetGrid = React.memo(
       const disableContextMenu = disableContextMenuRaw || lockRows
       const columns = useColumns(rawColumns, gutterColumn, stickyRightColumn)
       const hasStickyRightColumn = Boolean(stickyRightColumn)
+      const dataColumns = useMemo(
+        () => columns.slice(1, rawColumns.length + 1),
+        [columns, rawColumns.length]
+      )
+      const columnResize = useColumnResizing({
+        columns: dataColumns,
+        initialColumnWidths,
+        onColumnsResize,
+        onColumnsResizing,
+      })
+      const { resizing } = columnResize
       const stickyLeftColumnNumber = normalizeStickyColumnCount(
         stickyLeftColumnNumberRaw,
         rawColumns.length
@@ -139,7 +154,7 @@ export const DataSheetGrid = React.memo(
         totalWidth: contentWidth,
         columnWidths,
         columnRights,
-      } = useColumnWidths(columns, width)
+      } = useColumnWidths(columns, width, columnResize.widths)
       const stickyLeftWidth = getStickyLeftWidth(
         columnWidths ?? [],
         stickyLeftColumnNumber
@@ -394,7 +409,7 @@ export const DataSheetGrid = React.memo(
       // Scroll to any given cell making sure it is in view
       const scrollTo = useCallback(
         (cell: Cell & ScrollBehavior) => {
-          if (!height || !width) {
+          if (!height || !width || resizing.current) {
             return
           }
 
@@ -457,6 +472,7 @@ export const DataSheetGrid = React.memo(
           hasStickyRightColumn,
           stickyLeftColumnNumber,
           stickyLeftWidth,
+          resizing,
         ]
       )
 
@@ -905,6 +921,12 @@ export const DataSheetGrid = React.memo(
 
       const onMouseDown = useCallback(
         (event: MouseEvent) => {
+          if (
+            event.target instanceof Element &&
+            innerRef.current?.contains(event.target) &&
+            event.target.closest('.dsg-resize-handle')
+          )
+            return
           if (contextMenu && contextMenuItems.length) {
             return
           }
@@ -1308,7 +1330,7 @@ export const DataSheetGrid = React.memo(
 
       const onKeyDown = useCallback(
         (event: KeyboardEvent) => {
-          if (!activeCell) {
+          if (!activeCell || resizing.current) {
             return
           }
 
@@ -1537,6 +1559,7 @@ export const DataSheetGrid = React.memo(
           setSelectionCell,
           stopEditing,
           hasStickyRightColumn,
+          resizing,
         ]
       )
       useDocumentEventListener('keydown', onKeyDown)
@@ -1829,6 +1852,23 @@ export const DataSheetGrid = React.memo(
             stopEditing={stopEditing}
             cellClassName={cellClassName}
             onScroll={onScroll}
+            columnResize={
+              onColumnsResize
+                ? {
+                    ...columnResize.controls,
+                    start: (id, columnWidth) => {
+                      columnResize.controls.start(id, columnWidth)
+                      setEditing(false)
+                      setSelectionMode({
+                        active: false,
+                        columns: false,
+                        rows: false,
+                      })
+                      setExpandingSelectionFromRowIndex(null)
+                    },
+                  }
+                : undefined
+            }
           >
             <SelectionRect
               columnRights={columnRights}
