@@ -18,6 +18,7 @@ export const Grid = <T extends any>({
   innerRef,
   columnWidths,
   hasStickyRightColumn,
+  stickyLeftColumnNumber,
   displayHeight,
   headerRowHeight,
   rowHeight,
@@ -43,6 +44,7 @@ export const Grid = <T extends any>({
   innerRef: RefObject<HTMLDivElement>
   columnWidths?: number[]
   hasStickyRightColumn: boolean
+  stickyLeftColumnNumber: number
   displayHeight: number
   headerRowHeight: number
   rowHeight: (index: number) => { height: number }
@@ -96,17 +98,16 @@ export const Grid = <T extends any>({
     getItemKey: (index: number): string | number => columns[index].id ?? index,
     overscan: 1,
     rangeExtractor: (range) => {
-      const result = defaultRangeExtractor(range)
-      if (result[0] !== 0) {
-        result.unshift(0)
+      // Include every frozen column, once, in document order. Sticky flex items
+      // must not be emitted in reverse order when they leave the virtual range.
+      const result = new Set(defaultRangeExtractor(range))
+      for (let index = 0; index <= stickyLeftColumnNumber; index++) {
+        result.add(index)
       }
-      if (
-        hasStickyRightColumn &&
-        result[result.length - 1] !== columns.length - 1
-      ) {
-        result.push(columns.length - 1)
+      if (hasStickyRightColumn) {
+        result.add(columns.length - 1)
       }
-      return result
+      return Array.from(result).sort((a, b) => a - b)
     },
   })
 
@@ -140,7 +141,9 @@ export const Grid = <T extends any>({
       >
         {headerRowHeight > 0 && (
           <div
-            className={cx('dsg-row', 'dsg-row-header')}
+            className={cx('dsg-row', 'dsg-row-header', {
+              'dsg-row-sticky-left': stickyLeftColumnNumber > 0,
+            })}
             style={{
               width: fullWidth ? '100%' : colVirtualizer.getTotalSize(),
               height: headerRowHeight,
@@ -150,6 +153,9 @@ export const Grid = <T extends any>({
               <CellComponent
                 key={col.key}
                 gutter={col.index === 0}
+                stickyLeft={
+                  col.index > 0 && col.index <= stickyLeftColumnNumber
+                }
                 stickyRight={
                   hasStickyRightColumn && col.index === columns.length - 1
                 }
@@ -182,6 +188,7 @@ export const Grid = <T extends any>({
               key={row.key}
               className={cx(
                 'dsg-row',
+                stickyLeftColumnNumber > 0 && 'dsg-row-sticky-left',
                 typeof rowClassName === 'string' ? rowClassName : null,
                 typeof rowClassName === 'function'
                   ? rowClassName({
@@ -215,6 +222,9 @@ export const Grid = <T extends any>({
                   <CellComponent
                     key={col.key}
                     gutter={col.index === 0}
+                    stickyLeft={
+                      col.index > 0 && col.index <= stickyLeftColumnNumber
+                    }
                     stickyRight={
                       hasStickyRightColumn && col.index === columns.length - 1
                     }

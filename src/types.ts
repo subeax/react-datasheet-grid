@@ -63,6 +63,8 @@ export type SelectionContextType = {
   dataLength: number
   rowHeight: (index: number) => { height: number; top: number }
   hasStickyRightColumn: boolean
+  stickyLeftColumnNumber: number
+  outerRef: React.RefObject<HTMLDivElement>
   editing: boolean
   isCellDisabled: (cell: Cell) => boolean
   headerRowHeight: number
@@ -93,7 +95,13 @@ export type AddRowsComponentProps = {
 
 export type ContextMenuItem =
   | {
-      type: 'INSERT_ROW_BELLOW' | 'DELETE_ROW' | 'DUPLICATE_ROW' | 'COPY' | 'CUT' | 'PASTE'
+      type:
+        | 'INSERT_ROW_BELLOW'
+        | 'DELETE_ROW'
+        | 'DUPLICATE_ROW'
+        | 'COPY'
+        | 'CUT'
+        | 'PASTE'
       action: () => void
     }
   | {
@@ -134,6 +142,8 @@ export type DataSheetGridProps<T> = {
   onChange?: (value: T[], operations: Operation[]) => void
   columns?: Partial<Column<T, any, any>>[]
   gutterColumn?: SimpleColumn<T, any> | false
+  /** Number of leading data columns to freeze, excluding the gutter. Defaults to 0. */
+  stickyLeftColumnNumber?: number
   stickyRightColumn?: SimpleColumn<T, any>
   rowKey?: string | ((opts: { rowData: T; rowIndex: number }) => string)
   height?: number

@@ -101,6 +101,30 @@ function App() => {
 
 You can also disable the gutter completely by passing `false`.
 
+### stickyLeftColumnNumber
+> Type: `number`<br />
+> Default: `0`
+
+Freezes the first N **data columns** during horizontal scrolling. The gutter is
+not counted; it remains frozen independently. Frozen columns remain editable
+and participate in selection, clipboard operations and fill like any other data
+column. This can be combined with `gutterColumn={false}` and `stickyRightColumn`.
+
+```tsx
+<DataSheetGrid
+  columns={columns}
+  value={data}
+  onChange={setData}
+  stickyLeftColumnNumber={2}
+/>
+```
+
+The count is floored and clamped between zero and the number of data columns;
+non-finite values disable freezing. It is a dynamic primitive prop in both
+`DataSheetGrid` and `DynamicDataSheetGrid`. Changing it does not require a remount.
+Keep the total frozen width (including the gutter and any sticky-right column)
+below the viewport width so there is space to interact with scrolling columns.
+
 ### stickyRightColumn
 > Type: `Column`<br />
 > Default: `null`

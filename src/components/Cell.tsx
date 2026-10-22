@@ -3,6 +3,7 @@ import cx from 'classnames'
 
 export const Cell: FC<{
   gutter: boolean
+  stickyLeft: boolean
   stickyRight: boolean
   disabled?: boolean
   className?: string
@@ -13,6 +14,7 @@ export const Cell: FC<{
 }> = ({
   children,
   gutter,
+  stickyLeft,
   stickyRight,
   active,
   disabled,
@@ -27,6 +29,7 @@ export const Cell: FC<{
         gutter && 'dsg-cell-gutter',
         disabled && 'dsg-cell-disabled',
         gutter && active && 'dsg-cell-gutter-active',
+        stickyLeft && 'dsg-cell-sticky-left',
         stickyRight && 'dsg-cell-sticky-right',
         className
       )}

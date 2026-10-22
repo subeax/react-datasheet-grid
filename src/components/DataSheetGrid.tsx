@@ -42,6 +42,10 @@ import { getAllTabbableElements } from '../utils/tab'
 import { Grid } from './Grid'
 import { SelectionRect } from './SelectionRect'
 import { useRowHeights } from '../hooks/useRowHeights'
+import {
+  getStickyLeftWidth,
+  normalizeStickyColumnCount,
+} from '../utils/stickyColumns'
 
 const DEFAULT_DATA: any[] = []
 const DEFAULT_COLUMNS: Column<any, any, any>[] = []
@@ -70,6 +74,7 @@ export const DataSheetGrid = React.memo(
         rowHeight = 40,
         headerRowHeight = typeof rowHeight === 'number' ? rowHeight : 40,
         gutterColumn,
+        stickyLeftColumnNumber: stickyLeftColumnNumberRaw = 0,
         stickyRightColumn,
         rowKey,
         addRowsComponent: AddRowsComponent = AddRows,
@@ -95,6 +100,10 @@ export const DataSheetGrid = React.memo(
       const disableContextMenu = disableContextMenuRaw || lockRows
       const columns = useColumns(rawColumns, gutterColumn, stickyRightColumn)
       const hasStickyRightColumn = Boolean(stickyRightColumn)
+      const stickyLeftColumnNumber = normalizeStickyColumnCount(
+        stickyLeftColumnNumberRaw,
+        rawColumns.length
+      )
       const innerRef = useRef<HTMLDivElement>(null)
       const outerRef = useRef<HTMLDivElement>(null)
       const beforeTabIndexRef = useRef<HTMLDivElement>(null)
@@ -131,6 +140,10 @@ export const DataSheetGrid = React.memo(
         columnWidths,
         columnRights,
       } = useColumnWidths(columns, width)
+      const stickyLeftWidth = getStickyLeftWidth(
+        columnWidths ?? [],
+        stickyLeftColumnNumber
+      )
 
       // x,y coordinates of the right click
       const [contextMenu, setContextMenu] = useState<{
@@ -246,11 +259,12 @@ export const DataSheetGrid = React.memo(
                 y = 0
               }
 
-              if (
-                event.clientX - outerBoundingClientRect.left <=
-                columnWidths[0]
-              ) {
+              const viewportX = event.clientX - outerBoundingClientRect.left
+              if (viewportX <= columnWidths[0]) {
+                // The gutter must win over data-column hit testing.
                 x = 0
+              } else if (viewportX < stickyLeftWidth) {
+                x = viewportX
               }
 
               if (
@@ -278,6 +292,7 @@ export const DataSheetGrid = React.memo(
           getOuterBoundingClientRect,
           headerRowHeight,
           hasStickyRightColumn,
+          stickyLeftWidth,
           getRowIndex,
         ]
       )
@@ -408,10 +423,11 @@ export const DataSheetGrid = React.memo(
             columnRights &&
             columnWidths &&
             outerRef.current &&
-            !cell.doNotScrollX
+            !cell.doNotScrollX &&
+            cell.col >= stickyLeftColumnNumber
           ) {
-            // Align left
-            const leftMax = columnRights[cell.col] - columnRights[0]
+            // Align left, outside the whole frozen pane (not just the gutter).
+            const leftMax = columnRights[cell.col] - stickyLeftWidth
             // Align right
             const leftMin =
               columnRights[cell.col] +
@@ -439,6 +455,8 @@ export const DataSheetGrid = React.memo(
           columnWidths,
           getRowSize,
           hasStickyRightColumn,
+          stickyLeftColumnNumber,
+          stickyLeftWidth,
         ]
       )
 
@@ -1229,7 +1247,11 @@ export const DataSheetGrid = React.memo(
       const onMouseMove = useCallback(
         (event: MouseEvent) => {
           if (expandingSelectionFromRowIndex !== null) {
-            const cursorIndex = getCursorIndex(event)
+            const cursorIndex = getCursorIndex(
+              event,
+              stickyLeftColumnNumber > 0,
+              stickyLeftColumnNumber > 0
+            )
 
             if (cursorIndex) {
               setExpandSelectionRowsCount(
@@ -1244,7 +1266,11 @@ export const DataSheetGrid = React.memo(
           }
 
           if (selectionMode.active) {
-            const cursorIndex = getCursorIndex(event)
+            const cursorIndex = getCursorIndex(
+              event,
+              stickyLeftColumnNumber > 0,
+              stickyLeftColumnNumber > 0
+            )
 
             const lastColumnIndex =
               columns.length - (hasStickyRightColumn ? 3 : 2)
@@ -1275,6 +1301,7 @@ export const DataSheetGrid = React.memo(
           setSelectionCell,
           data.length,
           expandingSelectionFromRowIndex,
+          stickyLeftColumnNumber,
         ]
       )
       useDocumentEventListener('mousemove', onMouseMove)
@@ -1782,6 +1809,7 @@ export const DataSheetGrid = React.memo(
             outerRef={outerRef}
             columnWidths={columnWidths}
             hasStickyRightColumn={hasStickyRightColumn}
+            stickyLeftColumnNumber={stickyLeftColumnNumber}
             displayHeight={displayHeight}
             data={data}
             fullWidth={fullWidth}
@@ -1810,6 +1838,8 @@ export const DataSheetGrid = React.memo(
               headerRowHeight={headerRowHeight}
               rowHeight={getRowSize}
               hasStickyRightColumn={hasStickyRightColumn}
+              stickyLeftColumnNumber={stickyLeftColumnNumber}
+              outerRef={outerRef}
               dataLength={data.length}
               viewHeight={height}
               viewWidth={width}

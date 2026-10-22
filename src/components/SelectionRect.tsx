@@ -1,6 +1,9 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import cx from 'classnames'
 import { SelectionContextType } from '../types'
+import { getStickyLeftWidth, splitStickyRange } from '../utils/stickyColumns'
+
+type Rect = { left: number; top: number; width: number; height: number }
 
 const buildSquare = (
   top: number | string,
@@ -48,6 +51,8 @@ export const SelectionRect = React.memo<SelectionContextType>(
     rowHeight,
     activeCell,
     hasStickyRightColumn,
+    stickyLeftColumnNumber,
+    outerRef,
     dataLength,
     viewWidth,
     viewHeight,
@@ -57,6 +62,18 @@ export const SelectionRect = React.memo<SelectionContextType>(
     editing,
     expandSelection,
   }) => {
+    // Only overlays need to rerender with horizontal scroll. The cells stay pinned
+    // by CSS, and consumers' onScroll callbacks remain untouched.
+    const [scrollOffset, setScrollOffset] = useState(0)
+    useEffect(() => {
+      const element = outerRef.current
+      if (!element || stickyLeftColumnNumber === 0) return
+      const update = () => setScrollOffset(element.scrollLeft)
+      update()
+      element.addEventListener('scroll', update)
+      return () => element.removeEventListener('scroll', update)
+    }, [outerRef, stickyLeftColumnNumber])
+    const scrollLeft = stickyLeftColumnNumber > 0 ? scrollOffset : 0
     const activeCellIsDisabled = activeCell ? isCellDisabled(activeCell) : false
 
     const selectionIsDisabled = useMemo(() => {
@@ -78,6 +95,34 @@ export const SelectionRect = React.memo<SelectionContextType>(
     if (!columnWidths || !columnRights) {
       return null
     }
+
+    const stickyLeftWidth = getStickyLeftWidth(
+      columnWidths,
+      stickyLeftColumnNumber
+    )
+    const viewportRight =
+      scrollLeft +
+      Math.min(viewWidth ?? Infinity, contentWidth ?? Infinity) -
+      (hasStickyRightColumn ? columnWidths[columnWidths.length - 1] : 0)
+    const project = (
+      rect: Rect | null | false,
+      firstColumn: number,
+      lastColumn: number
+    ) =>
+      rect
+        ? splitStickyRange({
+            ...rect,
+            firstColumn,
+            lastColumn,
+            stickyColumns: stickyLeftColumnNumber,
+            stickyWidth: stickyLeftWidth,
+            scrollLeft,
+            viewportRight,
+          }).map(({ left, width, sticky }) => ({
+            rect: { ...rect, left, width },
+            sticky,
+          }))
+        : []
 
     const extraPixelV = (rowI: number): number => {
       return rowI < dataLength - 1 ? 1 : 0
@@ -148,6 +193,34 @@ export const SelectionRect = React.memo<SelectionContextType>(
           1,
       }
 
+    const activeRects = project(
+      activeCellRect,
+      activeCell?.col ?? 0,
+      activeCell?.col ?? 0
+    )
+    const selectionRects = project(
+      selectionRect,
+      selection?.min.col ?? 0,
+      selection?.max.col ?? 0
+    )
+    const expandRects = project(
+      expandRowsRect,
+      minSelection?.col ?? 0,
+      maxSelection?.col ?? 0
+    )
+    const markerRects = selectionRect ? selectionRects : activeRects
+    const indicatorSticky =
+      (maxSelection?.col ?? Infinity) < stickyLeftColumnNumber
+    const indicatorLeft = expandRowsIndicator
+      ? expandRowsIndicator.left + (indicatorSticky ? scrollLeft : 0)
+      : 0
+    const indicatorVisible =
+      stickyLeftColumnNumber === 0 ||
+      (indicatorLeft <= viewportRight &&
+        (indicatorSticky || indicatorLeft > scrollLeft + stickyLeftWidth))
+    const overlayClass =
+      stickyLeftColumnNumber > 0 ? 'dsg-sticky-range-overlay' : undefined
+
     return (
       <>
         <div
@@ -170,30 +243,38 @@ export const SelectionRect = React.memo<SelectionContextType>(
             })}
             style={{
               top: headerRowHeight,
-              left: columnWidths[0],
+              left: stickyLeftWidth,
               height: viewHeight ? viewHeight - headerRowHeight : 0,
               width:
                 contentWidth && viewWidth
-                  ? viewWidth -
-                    columnWidths[0] -
-                    (hasStickyRightColumn
-                      ? columnWidths[columnWidths.length - 1]
-                      : 0)
-                  : `calc(100% - ${
-                      columnWidths[0] +
+                  ? Math.max(
+                      0,
+                      viewWidth -
+                        stickyLeftWidth -
+                        (hasStickyRightColumn
+                          ? columnWidths[columnWidths.length - 1]
+                          : 0)
+                    )
+                  : `max(0px, calc(100% - ${
+                      stickyLeftWidth +
                       (hasStickyRightColumn
                         ? columnWidths[columnWidths.length - 1]
                         : 0)
-                    }px)`,
+                    }px))`,
             }}
           />
         </div>
-        {(selectionRect || activeCellRect) && (
+        {markerRects.map(({ rect, sticky }) => (
           <div
-            className="dsg-selection-col-marker-container"
+            key={String(sticky)}
+            className={cx(
+              'dsg-selection-col-marker-container',
+              overlayClass,
+              sticky && 'dsg-sticky-left-overlay'
+            )}
             style={{
-              left: selectionRect?.left ?? activeCellRect?.left,
-              width: selectionRect?.width ?? activeCellRect?.width,
+              left: rect.left,
+              width: rect.width,
               height:
                 rowHeight(dataLength - 1).top +
                 rowHeight(dataLength - 1).height +
@@ -208,7 +289,7 @@ export const SelectionRect = React.memo<SelectionContextType>(
               style={{ top: headerRowHeight }}
             />
           </div>
-        )}
+        ))}
         {(selectionRect || activeCellRect) && (
           <div
             className="dsg-selection-row-marker-container"
@@ -223,46 +304,68 @@ export const SelectionRect = React.memo<SelectionContextType>(
                 'dsg-selection-row-marker',
                 selectionIsDisabled && 'dsg-selection-row-marker-disabled'
               )}
-              style={{ left: columnWidths[0] }}
+              style={{ left: stickyLeftWidth }}
             />
           </div>
         )}
-        {activeCellRect && activeCell && (
+        {activeRects.map(({ rect, sticky }) => (
           <div
-            className={cx('dsg-active-cell', {
+            key={String(sticky)}
+            className={cx('dsg-active-cell', overlayClass, {
               'dsg-active-cell-focus': editing,
               'dsg-active-cell-disabled': activeCellIsDisabled,
+              'dsg-sticky-left-overlay': sticky,
             })}
-            style={activeCellRect}
+            style={rect}
           />
-        )}
-        {selectionRect && activeCellRect && (
+        ))}
+        {selectionRects.map(({ rect, sticky }) => {
+          const active = activeRects.find(
+            (part) => part.sticky === sticky
+          )?.rect
+          return (
+            <div
+              key={String(sticky)}
+              className={cx(
+                'dsg-selection-rect',
+                overlayClass,
+                sticky && 'dsg-sticky-left-overlay',
+                selectionIsDisabled && 'dsg-selection-rect-disabled'
+              )}
+              style={{
+                ...rect,
+                clipPath: active
+                  ? buildClipPath(
+                      active.top - rect.top,
+                      active.left - rect.left,
+                      active.top + active.height - rect.top,
+                      active.left + active.width - rect.left
+                    )
+                  : undefined,
+              }}
+            />
+          )
+        })}
+        {expandRects.map(({ rect, sticky }) => (
           <div
+            key={String(sticky)}
             className={cx(
-              'dsg-selection-rect',
-              selectionIsDisabled && 'dsg-selection-rect-disabled'
+              'dsg-expand-rows-rect',
+              overlayClass,
+              sticky && 'dsg-sticky-left-overlay'
             )}
-            style={{
-              ...selectionRect,
-              clipPath: buildClipPath(
-                activeCellRect.top - selectionRect.top,
-                activeCellRect.left - selectionRect.left,
-                activeCellRect.top + activeCellRect.height - selectionRect.top,
-                activeCellRect.left + activeCellRect.width - selectionRect.left
-              ),
-            }}
+            style={rect}
           />
-        )}
-        {expandRowsRect && (
-          <div className={cx('dsg-expand-rows-rect')} style={expandRowsRect} />
-        )}
-        {expandRowsIndicator && (
+        ))}
+        {expandRowsIndicator && indicatorVisible && (
           <div
             className={cx(
               'dsg-expand-rows-indicator',
+              overlayClass,
+              indicatorSticky && 'dsg-sticky-left-overlay',
               selectionIsDisabled && 'dsg-expand-rows-indicator-disabled'
             )}
-            style={expandRowsIndicator}
+            style={{ ...expandRowsIndicator, left: indicatorLeft }}
           />
         )}
       </>

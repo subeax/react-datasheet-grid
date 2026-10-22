@@ -19,3 +19,24 @@ jobs:
       - run: npm run build
       - run: npm test -- --runInBand
       - run: npm pack --dry-run
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        react: ['18', '19']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm exec playwright install --with-deps chromium
+      - if: matrix.react == '19'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/dsg-react-19" --ignore-scripts --no-package-lock react@19.2.8 react-dom@19.2.8
+          echo "REACT_TEST_ROOT=$RUNNER_TEMP/dsg-react-19" >> "$GITHUB_ENV"
+      - run: npm run test:browser
+      - run: npm run test:browser
+        env:
+          BROWSER_TEST_MODE: production

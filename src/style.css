@@ -81,6 +81,24 @@
   transform: translateY(-100%);
 }
 
+.dsg-cell-sticky-left {
+  position: sticky;
+  z-index: 30;
+}
+
+/* Frozen cells share the row instead of stacking vertically in normal flow. */
+.dsg-row-sticky-left {
+  display: flex;
+}
+
+.dsg-row-sticky-left > .dsg-cell {
+  flex-shrink: 0;
+}
+
+.dsg-row-sticky-left > .dsg-cell-sticky-right {
+  transform: none;
+}
+
 .dsg-cell-disabled {
   background: var(--dsg-cell-disabled-background-color);
 }
@@ -524,8 +542,8 @@
   text-align: right;
 }
 
-.dsg-hide-date-picker[type="date"]::-webkit-inner-spin-button,
-.dsg-hide-date-picker[type="date"]::-webkit-calendar-picker-indicator {
+.dsg-hide-date-picker[type='date']::-webkit-inner-spin-button,
+.dsg-hide-date-picker[type='date']::-webkit-calendar-picker-indicator {
   display: none;
   -webkit-appearance: none;
 }
@@ -576,4 +594,15 @@
   transition: all var(--dsg-transition-duration);
   pointer-events: none;
   background: rgba(0, 0, 0, 0.03);
+}
+
+/* Above frozen data cells, but below the sticky header. */
+.dsg-sticky-left-overlay {
+  z-index: 35;
+}
+
+/* Scroll-following geometry must never animate behind its cells. */
+.dsg-sticky-range-overlay,
+.dsg-sticky-range-overlay > * {
+  transition: none;
 }
