@@ -19,6 +19,12 @@ built release tarball, not the repository source archive.
 - Local fix: lazy text columns must have gained focus before committing on
   blur. StrictMode mount replay must not write rounded display values back.
   Reset change tracking on each focus session.
+- Local fix (4.11.6-subeax.3): the grid height correction (`setHeightDiff`)
+  runs in an effect instead of during render. A render React discards, such as
+  an interrupted transition or a suspended sibling, no longer schedules a
+  debounced update on a grid that never mounted ("Can't perform a React state
+  update on a component that hasn't mounted yet"). Same value, same 100 ms
+  debounce.
 - CI uses Node 22 instead of the obsolete Node 12 workflow (same intent as
   [PR #384](https://github.com/nick-keller/react-datasheet-grid/pull/384)).
 
