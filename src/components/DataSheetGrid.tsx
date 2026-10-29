@@ -145,7 +145,10 @@ export const DataSheetGrid = React.memo(
         refreshRate: 100,
       })
 
-      setHeightDiff(height ? displayHeight - height : 0)
+      // In an effect: a render React discards must not schedule a state update
+      useEffect(() => {
+        setHeightDiff(height ? displayHeight - height : 0)
+      }, [height, displayHeight, setHeightDiff])
 
       const edges = useEdges(outerRef, width, height)
 
