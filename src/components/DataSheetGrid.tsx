@@ -1331,6 +1331,58 @@ export const DataSheetGrid = React.memo(
       )
       useDocumentEventListener('mousemove', onMouseMove)
 
+      // Touch and pen send no mouse moves while dragging, so the fill handle follows
+      // their pointer events; anywhere else a finger keeps scrolling the grid.
+      const fillPointerId = useRef<number | null>(null)
+      const onPointerDown = useCallback(
+        (event: PointerEvent) => {
+          if (
+            event.pointerType === 'mouse' ||
+            !(event.target instanceof Element) ||
+            !innerRef.current?.contains(event.target) ||
+            !event.target.closest('.dsg-expand-rows-indicator')
+          ) {
+            return
+          }
+          // Also cancels the compatibility mouse events of a tap.
+          event.preventDefault()
+          fillPointerId.current = event.pointerId
+          setExpandingSelectionFromRowIndex(
+            Math.max(activeCell?.row ?? 0, selection?.max.row ?? 0)
+          )
+        },
+        [activeCell?.row, selection?.max.row]
+      )
+      useDocumentEventListener('pointerdown', onPointerDown)
+
+      const onPointerMove = useCallback(
+        (event: PointerEvent) => {
+          if (event.pointerId === fillPointerId.current) {
+            onMouseMove(event)
+          }
+        },
+        [onMouseMove]
+      )
+      useDocumentEventListener('pointermove', onPointerMove)
+
+      const onPointerEnd = useCallback(
+        (event: PointerEvent) => {
+          if (event.pointerId !== fillPointerId.current) {
+            return
+          }
+          fillPointerId.current = null
+          if (event.type === 'pointercancel') {
+            setExpandSelectionRowsCount(0)
+            setExpandingSelectionFromRowIndex(null)
+          } else {
+            onMouseUp()
+          }
+        },
+        [onMouseUp]
+      )
+      useDocumentEventListener('pointerup', onPointerEnd)
+      useDocumentEventListener('pointercancel', onPointerEnd)
+
       const onKeyDown = useCallback(
         (event: KeyboardEvent) => {
           if (!activeCell || resizing.current) {

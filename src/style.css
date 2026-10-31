@@ -599,6 +599,17 @@
   transition: all var(--dsg-transition-duration);
   cursor: crosshair;
   z-index: 25;
+  /* A finger drag on the handle fills rows instead of panning the page. */
+  touch-action: none;
+}
+
+@media (pointer: coarse) {
+  /* A fingertip-sized hit area around the small visible handle. */
+  .dsg-expand-rows-indicator::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
 }
 
 .dsg-expand-rows-indicator-disabled {
