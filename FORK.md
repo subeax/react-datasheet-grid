@@ -25,6 +25,13 @@ built release tarball, not the repository source archive.
   debounced update on a grid that never mounted ("Can't perform a React state
   update on a component that hasn't mounted yet"). Same value, same 100 ms
   debounce.
+- Local fix (4.11.6-subeax.4): the fill handle (`dsg-expand-rows-indicator`) works with
+  touch and pen. Selection and fill used document mouse events only, and a dragging finger
+  sends none: it pans the page. Touch/pen `pointerdown` on the handle now starts the same
+  fill, its `pointermove`/`pointerup` reuse the mouse logic, and `pointercancel` cancels
+  without filling. The handle has `touch-action: none` and, on coarse pointers, a larger
+  invisible hit area. Mouse behaviour is unchanged, and a finger elsewhere still scrolls.
+  Range selection by touch drag is not added.
 - CI uses Node 22 instead of the obsolete Node 12 workflow (same intent as
   [PR #384](https://github.com/nick-keller/react-datasheet-grid/pull/384)).
 
