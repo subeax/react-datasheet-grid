@@ -32,6 +32,12 @@ built release tarball, not the repository source archive.
   without filling. The handle has `touch-action: none` and, on coarse pointers, a larger
   invisible hit area. Mouse behaviour is unchanged, and a finger elsewhere still scrolls.
   Range selection by touch drag is not added.
+- Local fix (4.11.6-subeax.5): a click right after the grid mounts selects the cell under
+  the pointer. Column widths came only from the first ResizeObserver report, which arrives
+  after a later layout (later still on a busy main thread, e.g. right after a tab switch);
+  until then a click mapped to no cell and was dropped. The grid now measures the same
+  content box once in a layout effect before the first paint; the observer still handles
+  later changes. A hidden (zero-width) container still waits for the observer.
 - CI uses Node 22 instead of the obsolete Node 12 workflow (same intent as
   [PR #384](https://github.com/nick-keller/react-datasheet-grid/pull/384)).
 
