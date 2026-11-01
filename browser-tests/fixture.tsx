@@ -32,6 +32,8 @@ function Fixture() {
   const [data, setData] = useState(initial)
   const [sticky, setSticky] = useState(Number(params.get('sticky') ?? 2))
   const [selection, setSelection] = useState('null')
+  // `lazy`: the grid mounts on demand, to exercise input right after mounting.
+  const [shown, setShown] = useState(!params.has('lazy'))
   return (
     <>
       <button onClick={() => setSticky((value) => (value === 0 ? 2 : 0))}>
@@ -40,25 +42,30 @@ function Fixture() {
       <button onClick={() => ref.current?.setActiveCell({ row: 0, col: 0 })}>
         Focus first
       </button>
-      <div style={{ width: 500, marginTop: 20 }}>
-        <DataSheetGrid
-          ref={ref}
-          value={data}
-          onChange={setData}
-          columns={columns}
-          gutterColumn={params.has('noGutter') ? false : { basis: 40 }}
-          stickyRightColumn={
-            params.has('right') ? { title: 'Actions', basis: 60 } : undefined
-          }
-          stickyLeftColumnNumber={sticky}
-          rowHeight={32}
-          height={240}
-          lockRows
-          onSelectionChange={({ selection }) =>
-            setSelection(JSON.stringify(selection))
-          }
-        />
-      </div>
+      <button id="show" onClick={() => setShown(true)}>
+        Show grid
+      </button>
+      {shown && (
+        <div style={{ width: 500, marginTop: 20 }}>
+          <DataSheetGrid
+            ref={ref}
+            value={data}
+            onChange={setData}
+            columns={columns}
+            gutterColumn={params.has('noGutter') ? false : { basis: 40 }}
+            stickyRightColumn={
+              params.has('right') ? { title: 'Actions', basis: 60 } : undefined
+            }
+            stickyLeftColumnNumber={sticky}
+            rowHeight={32}
+            height={240}
+            lockRows
+            onSelectionChange={({ selection }) =>
+              setSelection(JSON.stringify(selection))
+            }
+          />
+        </div>
+      )}
       <output id="selection">{selection}</output>
       <pre id="data">{JSON.stringify(data)}</pre>
     </>

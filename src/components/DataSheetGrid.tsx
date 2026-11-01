@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -62,6 +63,21 @@ type ScrollBehavior = {
 }
 
 // eslint-disable-next-line react/display-name
+// Same box as the ResizeObserver's contentRect: inside borders, padding and scrollbars.
+const getContentBoxSize = (element: HTMLElement) => {
+  const style = getComputedStyle(element)
+  return {
+    width:
+      element.clientWidth -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight),
+    height:
+      element.clientHeight -
+      parseFloat(style.paddingTop) -
+      parseFloat(style.paddingBottom),
+  }
+}
+
 export const DataSheetGrid = React.memo(
   React.forwardRef<DataSheetGridRef, DataSheetGridProps<any>>(
     <T extends any>(
@@ -139,11 +155,24 @@ export const DataSheetGrid = React.memo(
       )
 
       // Width and height of the scrollable area
-      const { width, height } = useResizeDetector({
+      const observedSize = useResizeDetector({
         targetRef: outerRef,
         refreshMode: 'throttle',
         refreshRate: 100,
       })
+      // The observer first reports after a later layout, later still on a busy main
+      // thread. Until then there are no column widths and a click maps to no cell, so
+      // measure the same content box once before the first paint.
+      const [initialSize, setInitialSize] = useState<{
+        width: number
+        height: number
+      }>()
+      useLayoutEffect(() => {
+        const size = outerRef.current && getContentBoxSize(outerRef.current)
+        if (size && size.width > 0) setInitialSize(size)
+      }, [])
+      const width = observedSize.width ?? initialSize?.width
+      const height = observedSize.height ?? initialSize?.height
 
       // In an effect: a render React discards must not schedule a state update
       useEffect(() => {
