@@ -981,7 +981,9 @@ export const DataSheetGrid = React.memo(
             return
           }
 
+          // Only this grid's own handle starts a fill: every grid hears the document.
           if (
+            clickInside &&
             event.target instanceof HTMLElement &&
             event.target.className.includes('dsg-expand-rows-indicator')
           ) {

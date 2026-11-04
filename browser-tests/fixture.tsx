@@ -27,9 +27,16 @@ const params = new URLSearchParams(window.location.search)
 const initial = Array.from({ length: 12 }, (_, row) =>
   Object.fromEntries(fields.map((field) => [field, `${field}${row}`]))
 )
+// `twin`: a second grid below the first, with its own data (values prefixed `t`).
+const twinInitial = initial.map((row) =>
+  Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, `t${value}`])
+  )
+)
 function Fixture() {
   const ref = useRef<DataSheetGridRef>(null)
   const [data, setData] = useState(initial)
+  const [twinData, setTwinData] = useState(twinInitial)
   const [sticky, setSticky] = useState(Number(params.get('sticky') ?? 2))
   const [selection, setSelection] = useState('null')
   // `lazy`: the grid mounts on demand, to exercise input right after mounting.
@@ -46,7 +53,7 @@ function Fixture() {
         Show grid
       </button>
       {shown && (
-        <div style={{ width: 500, marginTop: 20 }}>
+        <div id="main" style={{ width: 500, marginTop: 20 }}>
           <DataSheetGrid
             ref={ref}
             value={data}
@@ -66,8 +73,23 @@ function Fixture() {
           />
         </div>
       )}
+      {params.has('twin') && (
+        <div id="twin" style={{ width: 500, marginTop: 20 }}>
+          <DataSheetGrid
+            value={twinData}
+            onChange={setTwinData}
+            columns={columns}
+            gutterColumn={{ basis: 40 }}
+            stickyLeftColumnNumber={0}
+            rowHeight={32}
+            height={240}
+            lockRows
+          />
+        </div>
+      )}
       <output id="selection">{selection}</output>
       <pre id="data">{JSON.stringify(data)}</pre>
+      <pre id="twin-data">{JSON.stringify(twinData)}</pre>
     </>
   )
 }
