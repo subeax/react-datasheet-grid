@@ -38,6 +38,12 @@ built release tarball, not the repository source archive.
   until then a click mapped to no cell and was dropped. The grid now measures the same
   content box once in a layout effect before the first paint; the observer still handles
   later changes. A hidden (zero-width) container still waits for the observer.
+- Local fix (4.11.6-subeax.6): a fill drag started on one grid's handle no longer puts the
+  other grids of the page into fill mode. Every grid listens to document mouse events and
+  the mouse-down handler took any `dsg-expand-rows-indicator` for its own, so a second grid
+  followed the pointer and scrolled itself towards the column under it (the touch/pen path
+  already checked that the handle is inside the grid). The handle must now be inside the
+  grid that handles the event.
 - CI uses Node 22 instead of the obsolete Node 12 workflow (same intent as
   [PR #384](https://github.com/nick-keller/react-datasheet-grid/pull/384)).
 
