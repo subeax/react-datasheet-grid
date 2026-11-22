@@ -438,6 +438,98 @@ export const DataSheetGrid = React.memo(
         ]
       )
 
+      const copyCellValue = useCallback(
+        ({ col, row }: Cell): string => {
+          const { copyValue = () => null } = columns[col + 1]
+
+          return String(
+            copyValue({ rowData: dataRef.current[row], rowIndex: row }) ?? ''
+          )
+        },
+        [columns]
+      )
+
+      // Write text values into a block of cells the way a paste does: through
+      // each column's prePasteValues and pasteValue, skipping disabled cells
+      const pasteCells = useCallback(
+        (min: Cell, max: Cell, valueAt: (cell: Cell) => string) => {
+          Promise.all(
+            Array.from({ length: max.col - min.col + 1 }, (_, columnIndex) => {
+              const col = min.col + columnIndex
+              const values = Array.from(
+                { length: max.row - min.row + 1 },
+                (_, rowIndex) => valueAt({ col, row: min.row + rowIndex })
+              )
+
+              return columns[col + 1]?.prePasteValues?.(values) ?? values
+            })
+          ).then((results) => {
+            const newData = [...dataRef.current]
+
+            results.forEach((values, columnIndex) => {
+              const col = min.col + columnIndex
+              const pasteValue = columns[col + 1]?.pasteValue
+
+              if (pasteValue) {
+                values.forEach((value, rowIndex) => {
+                  const row = min.row + rowIndex
+
+                  if (!isCellDisabled({ col, row })) {
+                    newData[row] = pasteValue({
+                      rowData: newData[row],
+                      value,
+                      rowIndex: row,
+                    })
+                  }
+                })
+              }
+            })
+
+            onChange(newData, [
+              {
+                type: 'UPDATE',
+                fromRowIndex: min.row,
+                toRowIndex: max.row + 1,
+              },
+            ])
+          })
+        },
+        [columns, isCellDisabled, onChange]
+      )
+
+      // Ctrl+D and Ctrl+R as in spreadsheets: copy the selection's first row
+      // down or its first column right. A selection one row (or column) wide
+      // takes the row above (or the column to the left) instead
+      const fillSelection = useCallback(
+        (direction: 'down' | 'right') => {
+          if (!activeCell) {
+            return
+          }
+
+          const min: Cell = selection?.min ?? activeCell
+          const max: Cell = selection?.max ?? activeCell
+
+          if (direction === 'down') {
+            const source = min.row === max.row ? min.row - 1 : min.row
+
+            if (source >= 0) {
+              pasteCells({ col: min.col, row: source + 1 }, max, ({ col }) =>
+                copyCellValue({ col, row: source })
+              )
+            }
+          } else {
+            const source = min.col === max.col ? min.col - 1 : min.col
+
+            if (source >= 0) {
+              pasteCells({ col: source + 1, row: min.row }, max, ({ row }) =>
+                copyCellValue({ col: source, row })
+              )
+            }
+          }
+        },
+        [activeCell, copyCellValue, pasteCells, selection?.max, selection?.min]
+      )
+
       // Scroll to any given cell making sure it is in view
       const scrollTo = useCallback(
         (cell: Cell & ScrollBehavior) => {
@@ -1183,78 +1275,20 @@ export const DataSheetGrid = React.memo(
       const onMouseUp = useCallback(() => {
         if (expandingSelectionFromRowIndex !== null) {
           if (expandSelectionRowsCount > 0 && activeCell) {
-            let copyData: Array<Array<string>> = []
-
             const min: Cell = selection?.min || activeCell
             const max: Cell = selection?.max || activeCell
 
-            for (let row = min.row; row <= max.row; ++row) {
-              copyData.push([])
-
-              for (let col = min.col; col <= max.col; ++col) {
-                const { copyValue = () => null } = columns[col + 1]
-                copyData[row - min.row].push(
-                  String(copyValue({ rowData: data[row], rowIndex: row }) ?? '')
-                )
-              }
-            }
-
-            Promise.all(
-              copyData[0].map((_, columnIndex) => {
-                const prePasteValues =
-                  columns[min.col + columnIndex + 1]?.prePasteValues
-
-                const values = copyData.map((row) => row[columnIndex])
-                return prePasteValues?.(values) ?? values
-              })
-            ).then((results) => {
-              copyData = copyData.map((_, rowIndex) =>
-                results.map((column) => column[rowIndex])
-              )
-
-              const newData = [...data]
-
-              for (
-                let columnIndex = 0;
-                columnIndex < copyData[0].length;
-                columnIndex++
-              ) {
-                const pasteValue =
-                  columns[min.col + columnIndex + 1]?.pasteValue
-
-                if (pasteValue) {
-                  for (
-                    let rowIndex = max.row + 1;
-                    rowIndex <= max.row + expandSelectionRowsCount;
-                    rowIndex++
-                  ) {
-                    if (
-                      !isCellDisabled({
-                        col: columnIndex + min.col,
-                        row: rowIndex,
-                      })
-                    ) {
-                      newData[rowIndex] = pasteValue({
-                        rowData: newData[rowIndex],
-                        value:
-                          copyData[(rowIndex - max.row - 1) % copyData.length][
-                            columnIndex
-                          ],
-                        rowIndex,
-                      })
-                    }
-                  }
-                }
-              }
-
-              onChange(newData, [
-                {
-                  type: 'UPDATE',
-                  fromRowIndex: max.row + 1,
-                  toRowIndex: max.row + 1 + expandSelectionRowsCount,
-                },
-              ])
-            })
+            // Repeat the selected rows over the rows the handle was dragged to
+            pasteCells(
+              { col: min.col, row: max.row + 1 },
+              { col: max.col, row: max.row + expandSelectionRowsCount },
+              ({ col, row }) =>
+                copyCellValue({
+                  col,
+                  row:
+                    min.row + ((row - max.row - 1) % (max.row - min.row + 1)),
+                })
+            )
 
             setExpandSelectionRowsCount(0)
             setActiveCell({
@@ -1291,12 +1325,10 @@ export const DataSheetGrid = React.memo(
         activeCell,
         selection?.min,
         selection?.max,
-        data,
-        onChange,
+        copyCellValue,
+        pasteCells,
         setActiveCell,
         setSelectionCell,
-        columns,
-        isCellDisabled,
       ])
       useDocumentEventListener('mouseup', onMouseUp)
 
@@ -1588,10 +1620,25 @@ export const DataSheetGrid = React.memo(
             !event.altKey &&
             !event.shiftKey
           ) {
-            duplicateRows(
-              selection?.min.row || activeCell.row,
-              selection?.max.row
-            )
+            // Locked rows cannot be duplicated, so the shortcut fills down
+            if (!lockRows) {
+              duplicateRows(
+                selection?.min.row || activeCell.row,
+                selection?.max.row
+              )
+            } else if (!editing) {
+              fillSelection('down')
+            }
+            event.preventDefault()
+          } else if (
+            event.key === 'r' &&
+            (event.ctrlKey || event.metaKey) &&
+            !event.altKey &&
+            !event.shiftKey
+          ) {
+            if (!editing) {
+              fillSelection('right')
+            }
             event.preventDefault()
           } else if (
             (isPrintableUnicode(event.key) || event.code.match(/Key[A-Z]$/)) &&
@@ -1635,8 +1682,10 @@ export const DataSheetGrid = React.memo(
           deleteSelection,
           duplicateRows,
           editing,
+          fillSelection,
           insertRowAfter,
           isCellDisabled,
+          lockRows,
           scrollTo,
           selection?.max.row,
           selection?.min.row,
