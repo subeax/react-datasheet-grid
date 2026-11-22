@@ -44,6 +44,14 @@ built release tarball, not the repository source archive.
   followed the pointer and scrolled itself towards the column under it (the touch/pen path
   already checked that the handle is inside the grid). The handle must now be inside the
   grid that handles the event.
+- Local change (4.11.6-subeax.7): Ctrl/Cmd+D fills down and Ctrl/Cmd+R fills right, as in
+  spreadsheets, when rows are locked (`lockRows`). The selection's first row is copied into
+  the rows below it, or its first column into the columns to its right; a selection one row
+  (or column) wide takes the row above (or the column to the left). Values go through the
+  columns' `copyValue`, `prePasteValues` and `pasteValue`, disabled cells are skipped and
+  the change is one `onChange`; the fill handle now uses the same code. Neither shortcut
+  acts while a cell is being edited. Without `lockRows`, Ctrl+D still duplicates rows. While
+  the grid has an active cell, Ctrl+R no longer reloads the page (Ctrl+Shift+R and F5 do).
 - CI uses Node 22 instead of the obsolete Node 12 workflow (same intent as
   [PR #384](https://github.com/nick-keller/react-datasheet-grid/pull/384)).
 
